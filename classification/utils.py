@@ -6,6 +6,7 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
+from random import randrange
 
 D = 178
 
@@ -19,119 +20,53 @@ def read_csv(input_file):
 
 # multi-class data for neural network (one more dimension)
 def load_data_nn(lines):
-    x_train_data = []
-    y_train_data = []
-    for line in lines[:len(lines)//2]:
+    x_data = []
+    y_data = []
+    for line in lines:
         x = line[1:-1] # remove the first column and the last column
         x = [int(i) for i in x]
-        x_train_data.append([x])
-        y_train_data.append([int(line[-1]) - 1]) # index
+        x_data.append([x])
+        y_data.append([int(line[-1]) - 1]) # index
 
-    x_test_data= []
-    y_test_data = []
-    for line in lines[len(lines)//2:]:
-        x = line[1:-1] # remove the first column and the last column
-        x = [int(i) for i in x]
-        x_test_data.append([x])
-        y_test_data.append([int(line[-1]) - 1]) # index
-
-    return x_train_data, y_train_data, x_test_data, y_test_data
+    return x_data, y_data
 
 # multi-class data
 def load_data(lines):
-    x_train_data = []
-    y_train_data = []
+    x_data = []
+    y_data = []
     for line in lines[:len(lines)//2]:
         x = line[1:-1] # remove the first column and the last column
         x = [int(i) for i in x]
-        x_train_data.append(x)
-        y_train_data.append(int(line[-1]) - 1) # index
+        x_data.append(x)
+        y_data.append(int(line[-1]) - 1) # index
 
-    x_test_data= []
-    y_test_data = []
-    for line in lines[len(lines)//2:]:
-        x = line[1:-1] # remove the first column and the last column
-        x = [int(i) for i in x]
-        x_test_data.append(x)
-        y_test_data.append(int(line[-1]) - 1) # index
-
-    return x_train_data, y_train_data, x_test_data, y_test_data
-
-# multi-class data
-def load_abnormal_data(lines):
-    x_train_data = []
-    y_train_data = []
-    for line in lines[:len(lines)//2]:
-        y = int(line[-1]) -1
-        if y == 0: continue         # only collect abnormal data
-        y_train_data.append(y)      # index
-
-        x = line[1:-1] # remove the first column and the last column
-        x = [int(i) for i in x]
-        x_train_data.append(x)
-
-    x_test_data= []
-    y_test_data = []
-    for line in lines[len(lines)//2:]:
-        y = int(line[-1]) -1
-        if y == 0: continue         # only collect abnormal data
-        y_test_data.append(y)      # index
-
-        x = line[1:-1] # remove the first column and the last column
-        x = [int(i) for i in x]
-        x_test_data.append(x)
-
-    return x_train_data, y_train_data, x_test_data, y_test_data
+    return x_data, y_data
 
 def load_binary_data(lines, base=0):
-    x_train_data = []
-    y_train_data = []
+    x_data = []
+    y_data = []
     for line in lines[:len(lines)//2]:
         x = line[1:-1] # remove the first column and the last column
         x = [int(i) for i in x]
-        x_train_data.append(x)
+        x_data.append(x)
         y = int(line[-1]) - 1       # index
         y = 0 if y == base else 1   # binary classification
-        y_train_data.append(y)      # index
+        y_data.append(y)      # index
 
-    x_test_data= []
-    y_test_data = []
-    for line in lines[len(lines)//2:]:
-        x = line[1:-1] # remove the first column and the last column
-        x = [int(i) for i in x]
-        x_test_data.append(x)
-        y = int(line[-1]) - 1 # index
-        y = 0 if y == 0 else 1 # binary classification
-        y_test_data.append(y) # index
+    return x_data, y_data
 
-    return x_train_data, y_train_data, x_test_data, y_test_data
-
-def load_binary_abnormal_data(lines, base):
-    x_train_data = []
-    y_train_data = []
+def load_binary_data_nn(lines, base=0):
+    x_data = []
+    y_data = []
     for line in lines[:len(lines)//2]:
+        x = line[1:-1] # remove the first column and the last column
+        x = [int(i) for i in x]
+        x_data.append([x])
         y = int(line[-1]) - 1       # index
-        if y == 0: continue         # only collect abnormal data
         y = 0 if y == base else 1   # binary classification
-        y_train_data.append(y)      # index
+        y_data.append([y])    # index
 
-        x = line[1:-1] # remove the first column and the last column
-        x = [int(i) for i in x]
-        x_train_data.append(x)
-
-    x_test_data= []
-    y_test_data = []
-    for line in lines[len(lines)//2:]:
-        y = int(line[-1]) - 1       # index
-        if y == 0: continue         # only collect abnormal data
-        y = 0 if y == 0 else 1 # binary classification
-        y_test_data.append(y) # index
-
-        x = line[1:-1] # remove the first column and the last column
-        x = [int(i) for i in x]
-        x_test_data.append(x)
-
-    return x_train_data, y_train_data, x_test_data, y_test_data
+    return x_data, y_data
 
 class Dataset(data.Dataset):
     def __init__(self, X, Y):
@@ -144,24 +79,28 @@ class Dataset(data.Dataset):
     def __getitem__(self, index):
         return self.X[index], self.Y[index]
 
-def load_dataset(file_path):
+def load_dataset(file_path, device):
     lines = read_csv(file_path)
-    x_train_data, y_train_data, x_test_data, y_test_data = load_data_nn(lines)
-    x_train_data, x_test_data = feature_scaler(x_train_data, x_test_data)
-#    x_train_data, y_train_data, x_test_data, y_test_data = x_train_data[:50], y_train_data[:50], x_test_data[:50], y_test_data[:50]
-    x_train_data, y_train_data, x_test_data, y_test_data = \
-        torch.FloatTensor(x_train_data), torch.LongTensor(y_train_data), \
-        torch.FloatTensor(x_test_data), torch.LongTensor(y_test_data)
-    return x_train_data, y_train_data, x_test_data, y_test_data
+    x_data, y_data = load_data_nn(lines)
+    x_data, y_data = x_data[:50], y_data[:50]
+    x_data, y_data = \
+        torch.FloatTensor(x_data).to(device), torch.LongTensor(y_data).to(device)
+    return x_data, y_data
 
-def load_dataset_batch(file_path, params):
+def load_dataset_binary(file_path, device):
     lines = read_csv(file_path)
-    x_train_data, y_train_data, x_test_data, y_test_data = load_data_nn(lines)
-    x_train_data, x_test_data = feature_scaler(x_train_data, x_test_data)
-#    x_train_data, y_train_data, x_test_data, y_test_data = x_train_data[:50], y_train_data[:50], x_test_data[:50], y_test_data[:50]
-    x_train_data, y_train_data, x_test_data, y_test_data = \
-        torch.FloatTensor(x_train_data), torch.LongTensor(y_train_data), \
-        torch.FloatTensor(x_test_data), torch.LongTensor(y_test_data)
+    x_data, y_data = load_binary_data_nn(lines)
+#    x_data, y_data = x_data[:50], y_data[:50]
+    x_data, y_data = \
+        torch.FloatTensor(x_data).to(device), torch.LongTensor(y_data).to(device)
+    return x_data, y_data
+
+def load_dataset_batch(file_path, params, device):
+    lines = read_csv(file_path)
+    x_data, y_data = load_data_nn(lines)
+#    x_data, y_data = x_data[:50], y_data[:50]
+    x_data, y_data = \
+        torch.FloatTensor(x_data).to(device), torch.LongTensor(y_data).to(device)
     train_set = Dataset(x_train_data, y_train_data)
     train_loader = data.DataLoader(train_set, **params)
     test_set = Dataset(x_test_data, y_test_data)
@@ -192,8 +131,9 @@ def feature_reduction(x_train_data, x_test_data, newD):
 def report(y_test_data, y_preds):
     print(confusion_matrix(y_test_data, y_preds))
     print(classification_report(y_test_data, y_preds))
-    print('accuracy: ', accuracy_score(y_test_data, y_preds))
-#    print('precision: ', precision_score(y_test_data, y_preds, average='macro'))
+    accuracy = accuracy_score(y_test_data, y_preds)
+    print('accuracy: ', accuracy)
+    return accuracy
 
 def train(net, epochs, optimizer, criterion, x_train_data, y_train_data, x_test_data, y_test_data, save_path, load_path):
     start_epoch = 1
@@ -366,3 +306,34 @@ def load_checkpoint(net, optimizer, save_path):
     print('=> loaded checkpoint {} epoch {} best eval loss {}'.format(save_path, checkpoint['epoch'], checkpoint['eval_loss']))
     return checkpoint['epoch'], checkpoint['eval_loss']
 
+# Split a dataset into k folds
+def cross_validation_split(dataset, n_folds):
+	dataset_split = list()
+	dataset_copy = list(dataset)
+	fold_size = int(len(dataset) / n_folds)
+	for i in range(n_folds):
+		fold = list()
+		while len(fold) < fold_size:
+			index = randrange(len(dataset_copy))
+			fold.append(dataset_copy.pop(index))
+		dataset_split.append(fold)
+	return pd.DataFrame(dataset_split)
+
+# Evaluate an algorithm using a cross validation split
+def evaluate_algorithm(dataset, algorithm, n_folds, *args):
+	folds = cross_validation_split(dataset, n_folds)
+	scores = list()
+	for fold in folds:
+		train_set = list(folds)
+		train_set.remove(fold)
+		train_set = sum(train_set, [])
+		test_set = list()
+		for row in fold:
+			row_copy = list(row)
+			test_set.append(row_copy)
+			row_copy[-1] = None
+		predicted = algorithm(train_set, test_set, *args)
+		actual = [row[-1] for row in fold]
+		accuracy = accuracy_metric(actual, predicted)
+		scores.append(accuracy)
+	return scores
