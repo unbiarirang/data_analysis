@@ -10,21 +10,28 @@ from utils.preprocess import load_data
 from utils.visualize import visualize, MDS_visualize
 from utils.metrics import silhouette_score_
 
-output_dir = "../output"
+output_dir = "../output_k"
 data_dir = '../data'
+
+
+global num
+
 
 parser = ap.ArgumentParser()
 parser.add_argument("--n_clusters", default=5, help="numbers of clusters", type=int)
 parser.add_argument("--init", default='kmeans++', help='method for init clusters', type=str)
-args=parser.parse_args()
+# args=parser.parse_args()
 
 class KMeans:
-    def __init__(self, n_clusters, init='kmeans++'):
+    def __init__(self, args):
         self.eps = 10e-3
-        self.n_clusters = n_clusters
-        self.init = init
+        self.n_clusters = args.n_clusters
+        self.init = args.init
         self.means = []
+        self.reduction = args.reduction
+        self.random_state = args.random_state
         # self.n_clusters = 5
+        self.num = 0
         
     def euclidean(self, X, y, square = False):
         if not square:
@@ -76,7 +83,7 @@ class KMeans:
         first_center = X[first_center_id]
         centers = np.array([first_center])
         n_local_trials = 2 + int(np.log(self.n_clusters))
-        print(n_local_trials)
+        # print(n_local_trials)
 
         
         for c in range(1, self.n_clusters):
@@ -100,12 +107,6 @@ class KMeans:
                     center_id = candidate_ids[trial]
                     # print(trial)
             centers = np.r_[centers, np.array([X[center_id]])]
-            # print(centers.shape)
-            # print(dissimilarity_square.shape)
-            # print(closest_dissimilarity_square.shape)
-            # print(possibility_matrix[1999])
-            # print(np.sum(closest_dissimilarity_square))
-            # print(center_seed)
         return self.rinit_clusters(X, centers = centers)
 
     def update_clusters(self, X):
@@ -155,8 +156,6 @@ class KMeans:
             print('iterations over')
 
         # km = KMeans(n_clusters = n_clusters, random_state = 1244).fit(x)
-        # print(km.cluster_centers_)
-        # print(km.labels_)
         
         # scores = silhouette_score(X, self.y, metric='euclidean')
         # print('silhouette scores: %f' %scores)
@@ -166,16 +165,21 @@ class KMeans:
         print('intra distance: %f' %intra_distance)
         print('inter_distance: %f' %inter_distance)
         print('silhouette score: %f' %s_score)
-
+        kargs = {'intra': intra_distance, 'inter': inter_distance, 'score': s_score}
         res_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Kmeans_%d.txt' %self.n_clusters))
         write_data = np.c_[X, self.y]
         # print(write_data[:1])
         np.savetxt(res_path, write_data, fmt='%d',delimiter=' ')
         print('Prediction results saved in %s' % res_path)
-                
 
-        vis_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Kmeans_%d.png' %self.n_clusters))
-        visualize(raw_data, X, self.y, self.n_clusters, 'kmeans', vis_path)
+        self.num += 1
+        print(self.num)
+        if self.init == 'random':
+            vis_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Kmeans_%d_%d.png' %(self.n_clusters, self.num)))
+            visualize(raw_data, X, self.y, self.n_clusters, 'kmeans', vis_path, self.reduction, self.random_state, **kargs)
+        elif self.init == 'kmeans++':
+            vis_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Kmeans++_%d_%d.png' %(self.n_clusters, self.num)))
+            visualize(raw_data, X, self.y, self.n_clusters, 'kmeans++', vis_path, self.reduction, self.random_state, **kargs)
         
 
 
@@ -183,5 +187,6 @@ if __name__ == "__main__":
     # print(sys.path)
     data = load_data(os.path.join(sys.path[0], data_dir, 'cluster_data.txt'))
     # print(data)
-    kmeans_clustering = KMeans(n_clusters=args.n_clusters, init=args.init)
+    args=parser.parse_args()
+    kmeans_clustering = KMeans(args)
     kmeans_clustering.run(data)

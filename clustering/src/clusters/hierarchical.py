@@ -24,20 +24,21 @@ parser.add_argument('--linkage', default='ward', help='')
 - max linkage uses the maximum distances between all observations of the two sets.
 - min uses the minimum of the distances between all observations of the two sets.
 '''
-args=parser.parse_args()
 
 class hierarchical:
 
-    def __init__(self, n_clusters=None, distance_threshold=None, linkage='ward'):
-        if (n_clusters is None) and (distance_threshold is None):
-            n_clusters = 5
+    def __init__(self, args):
+        if (args.n_clusters is None) and (args.threshold is None):
+            args.n_clusters = 5
             # raise ValueError('Either number of clusters or distance threshold must be assigned.')
-        if (n_clusters is not None) and (distance_threshold is not None):
+        if (args.n_clusters is not None) and (args.threshold is not None):
             raise ValueError('number of clusters and distance threshold cannot be assigned simultaneously.')
         
-        self.linkage = linkage
-        self.n_clusters = n_clusters
-        self.distance_threshold = distance_threshold
+        self.linkage = args.linkage
+        self.n_clusters = args.n_clusters
+        self.distance_threshold = args.threshold
+        self.reduction = args.reduction
+        self.random_state = args.random_state
 
 
     def euclidean(self, X, y, square = False):
@@ -131,11 +132,11 @@ class hierarchical:
         print('intra distance: %f' %intra_distance)
         print('inter_distance: %f' %inter_distance)
         print('silhouette score: %f' %s_score)
-
+        kargs = {'intra': intra_distance, 'inter': inter_distance, 'score': s_score}
 
 
         vis_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Hierarchical_%d.png' %self.n_clusters))
-        visualize(raw_data, X, self.y, self.n_clusters, 'hierarchical',vis_path)
+        visualize(raw_data, X, self.y, self.n_clusters, 'hierarchical',vis_path, self.reduction, self.random_state, **kargs)
 
         vis_proc_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Hierarchical_proc_%d.png' %self.n_clusters))
         visualize_proc(X, self.y, self.n_clusters, vis_proc_path)
@@ -146,5 +147,6 @@ class hierarchical:
 
 if __name__ == "__main__":
     data = load_data(os.path.join(sys.path[0], data_dir, 'cluster_data.txt'))
-    hierarchical = hierarchical(n_clusters=args.n_clusters, distance_threshold=args.threshold, linkage=args.linkage)
+    args=parser.parse_args()
+    hierarchical = hierarchical(args)
     hierarchical.run(data)

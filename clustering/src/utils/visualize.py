@@ -3,7 +3,7 @@
 
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.manifold import MDS
+from sklearn.manifold import MDS, TSNE
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.cluster.hierarchy import ward, dendrogram
 import os
@@ -18,7 +18,8 @@ label_color_map = {8: '#CC3333', # red
                 5: '#999999', # grey
                 6: '#FF9933', # orange
                 7: '#6666CC', # blue & purple
-                0: '#E03636'
+                0: '#E03636',
+                -1: 'black'
 
                 }
 
@@ -36,12 +37,29 @@ def MDS_visualize(data, path):
     plt.savefig(path)
     print('dimension reduction results saved in %s' %path)
 
+def TSNE_visualize(data, path, random_state):
+    print('dimension reduction...')
+    distance = 1 - cosine_similarity(data)
+    tsne = TSNE(n_components = 2, random_state = random_state)
+    pos = tsne.fit_transform(distance)
+    # print(pos.shape)
+    xs, ys = pos[:, 0], pos[:, 1]
 
-def visualize(raw_data, x, y, n_clusters, method, path):
+    for x_, y_ in zip(xs, ys):
+        plt.scatter(x_, y_)
+    plt.title('TSNE output')
+    plt.savefig(path)
+    print('dimension reduction results saved in %s' %path)
+
+
+def visualize(raw_data, x, y, n_clusters, method, path, reduction_method, random_state, **kargs):
     print('visualize results...')
     distance = 1 - cosine_similarity(x)
-    mds = MDS(n_components=2, dissimilarity="precomputed", random_state = 1)
-    pos = mds.fit_transform(distance)
+    if reduction_method.upper() == 'MDS':
+        res = MDS(n_components=2, dissimilarity="precomputed", random_state = random_state)
+    elif reduction_method.upper() == 'TSNE':
+        res = TSNE(n_components=2, random_state = random_state, perplexity=30)
+    pos = res.fit_transform(distance)
     # print(pos.shape)
     xs, ys = pos[:, 0], pos[:, 1]
 
@@ -57,8 +75,15 @@ def visualize(raw_data, x, y, n_clusters, method, path):
         # ax.legend(numpoints=1)
         # for i in range(len(df)):
         #    ax.text(df.ix[i]['x'], df.ix[i]['y'], df.ix[i]['label'], size=8)
+    
+    plt.title('%s Clustering for %d classes' %(method, n_clusters))
+    ax = fig.add_axes([0.78, 0.1, 0.2, 0.2])                
+    #在（0.5，0）到（0.5，1）区域写入标注，前两个参数是相对位置
+    ax.text(0.1,0.35, U'intra_distance: %f' %kargs['intra'], transform=ax.transAxes,fontdict = {'size': 8, 'color': 'black'})
+    ax.text(0.1,0.25, U'inter_distance: %f' %kargs['inter'], transform=ax.transAxes,fontdict = {'size': 8, 'color': 'black'})
+    ax.text(0.1,0.15, U'silhouette score: %f' %kargs['score'], transform=ax.transAxes,fontdict = {'size': 8, 'color': 'black'})
+    ax.set_axis_off()
 
-    plt.title('KMeans Clustering for %d classes' %n_clusters)
     plt.savefig(path)
     print('Visualized results saved in %s' %path)
 
