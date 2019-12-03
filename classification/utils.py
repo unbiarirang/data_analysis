@@ -82,7 +82,7 @@ class Dataset(data.Dataset):
 def load_dataset(file_path, device):
     lines = read_csv(file_path)
     x_data, y_data = load_data_nn(lines)
-    x_data, y_data = x_data[:50], y_data[:50]
+#    x_data, y_data = x_data[:50], y_data[:50]
     x_data, y_data = \
         torch.FloatTensor(x_data).to(device), torch.LongTensor(y_data).to(device)
     return x_data, y_data
@@ -263,6 +263,16 @@ def predict(net, X):
     y_preds = []
     for x in tqdm(X):
         output = net(x)
+        _, y_pred = torch.max(output.data, 1)
+        y_preds.append(y_pred)
+    return y_preds
+
+def ensemble_predict(nets, X):
+    y_preds = []
+    for x in tqdm(X):
+        output = torch.zeros([1, 5])
+        for net in nets:
+            output += net(x)
         _, y_pred = torch.max(output.data, 1)
         y_preds.append(y_pred)
     return y_preds
