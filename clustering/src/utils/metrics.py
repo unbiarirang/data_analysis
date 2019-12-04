@@ -1,8 +1,11 @@
+# !/usr/bin/env python3
+# encoding=utf-8
 
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import pairwise_distances_chunked
 import functools
+
 
 def silhouette_score_(X, labels, metric='euclidean'):
     '''
@@ -17,7 +20,6 @@ def silhouette_score_(X, labels, metric='euclidean'):
     label_freqs = np.bincount(labels)
     # check_number_of_labels(len(le.classes_), n_samples)
 
-    
     reduce_func = functools.partial(_silhouette_reduce,
                                     labels=labels, label_freqs=label_freqs)
     results = zip(*pairwise_distances_chunked(X, reduce_func=reduce_func))
@@ -38,18 +40,7 @@ def silhouette_score_(X, labels, metric='euclidean'):
 
 
 def _silhouette_reduce(D_chunk, start, labels, label_freqs):
-    """Accumulate silhouette statistics for vertical chunk of X
-    Parameters
-    ----------
-    D_chunk : shape (n_chunk_samples, n_samples)
-        precomputed distances for a chunk
-    start : int
-        first index in chunk
-    labels : array, shape (n_samples,)
-        corresponding cluster labels, encoded as {0, ..., n_clusters-1}
-    label_freqs : array
-        distribution of cluster labels in ``labels``
-    """
+    
     # accumulate distances from each sample to each cluster
     clust_dists = np.zeros((len(D_chunk), len(label_freqs)),
                            dtype=D_chunk.dtype)

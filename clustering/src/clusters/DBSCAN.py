@@ -1,27 +1,15 @@
 # !/usr/bin/env python3
 # encoding=utf-8
 
-
-from sklearn.cluster import DBSCAN
+# from sklearn.cluster import DBSCAN
 from sklearn.neighbors import *
-# from sklearn.cluster._dbscan_inner import dbscan_inner
-# from utils.dbscan_inner import dbscan_inner
 import numpy as np
 import os, sys
 import argparse as ap
 from utils.preprocess import load_data
 from utils.metrics import silhouette_score_
 from utils.visualize import visualize, MDS_visualize
-
-output_dir = "../output"
-data_dir = '../data'
-parser = ap.ArgumentParser()
-parser.add_argument("--eps", default=5, help="The maximum distance between two samples for one to be considered \
-        as in the neighborhood of the other.", type=float)
-parser.add_argument("--min_samples", default=7, help="The number of samples (or total weight) in a neighborhood for a point \
-        to be considered as a core point.", type=int)
-parser.add_argument("--algo", default='self-implemented', help="", type=str)
-
+from utils.config import args
 
 class dbscan:
     def __init__(self, args):
@@ -46,9 +34,6 @@ class dbscan:
 
 
     def dbscan_inner(self, is_core, neighborhoods):
-        #cdef np.npy_intp i, label_num = 0, v
-        #cdef np.ndarray[np.npy_intp, ndim=1] neighb
-        #cdef vector[np.npy_intp] stack
         stack = list()
         labels = self.y
         label_num = 0
@@ -64,30 +49,32 @@ class dbscan:
                         for n in range(neighbors.shape[0]):
                             neighb = neighbors[n]
                             if labels[neighb] == -1:
-                                # push(stack, neighb)
                                 stack.append(neighb)
 
                 if len(stack) == 0:
                     break
                 i = stack.pop()
-                # stack.pop_back()
             
             label_num += 1
         
         return labels
+    
+    def get_clusters(self, X):
+        means = []
+        for i in range(self.n_clusters):
+            mean = np.mean(X[np.where(self.y == i)], axis=0)
+            means.append(mean)
+        return means
 
     def run(self, raw_data):
 
         X = np.array(raw_data)
-        # print(X[0])
-        # print(X[651])
-        # print(X[1272])
-        
+    
         if self.algo and self.algo == 'standard':
-            clusters = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit(X)
-            self.y = clusters.labels_
-            # print(km.cluster_centers_)
-            # print(km.labels_)
+            # clusters = DBSCAN(eps=self.eps, min_samples=self.min_samples).fit(X)
+            # self.y = clusters.labels_
+            pass
+
         else:
             neighbors_model = NearestNeighbors(radius=self.eps, algorithm='auto',
                                            leaf_size=30,
@@ -98,11 +85,10 @@ class dbscan:
             # This has worst case O(n^2) memory complexity
             neighborhoods = neighbors_model.radius_neighbors(X, self.eps,
                                                          return_distance=False)
-            # print(type(neighborhoods))
-            #neighborhoods = self.neighbors(X)
-            # print(type(neighborhoods))
+            
             n_neighbors = np.array([neighbors.shape[0] for neighbors in neighborhoods])
             # print(n_neighbors)
+
             # Initially, all samples are noise.
             self.y = np.full(X.shape[0], -1)
 
@@ -112,6 +98,12 @@ class dbscan:
             # dbscan_inner(core_samples, neighborhoods, self.y)
             self.y = self.dbscan_inner(core_samples, neighborhoods)
 
+        clusters = set(self.y)
+        clusters.discard(-1)
+        self.n_clusters = len(clusters)
+
+        self.means = self.get_clusters(X)
+        print('Means for clusters: %s' % str(self.means))
         intra_distance, inter_distance, s_score = silhouette_score_(X, self.y)
         # print('#samples in clusters, %d, %d, %d, %d, %d' %(self.clusters[0], self.))
         print('intra distance: %f' %intra_distance)
@@ -119,23 +111,19 @@ class dbscan:
         print('silhouette score: %f' %s_score)
         kargs = {'intra': intra_distance, 'inter': inter_distance, 'score': s_score}
         
-        clusters = set(self.y)
-        clusters.discard(-1)
-        self.n_clusters = len(clusters)
-        res_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'DBSCAN_%d.txt' %self.n_clusters))
+        res_path = os.path.normpath(os.path.join(sys.path[0], args.output_dir, 'DBSCAN_%d.txt' %self.n_clusters))
         write_data = np.c_[X, self.y]
         # print(write_data[:1])
         np.savetxt(res_path, write_data, fmt='%d',delimiter=' ')
         print('Prediction results saved in %s' % res_path)
                 
-
-        vis_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'DBSCAN_%d.png' %self.n_clusters))
+        vis_path = os.path.normpath(os.path.join(sys.path[0], args.output_dir, 'DBSCAN_%d.png' %self.n_clusters))
         visualize(raw_data, X, self.y, self.n_clusters, 'DBSCAN', vis_path, self.reduction, self.random_state, **kargs)
 
 
 
 if __name__ == "__main__":
-    data = load_data(os.path.join(sys.path[0], data_dir, 'cluster_data.txt'))
+    data = load_data(os.path.join(sys.path[0], args.data_dir, 'cluster_data.txt'))
     args=parser.parse_args()
     dbscan = dbscan(args)
     dbscan.run(data)

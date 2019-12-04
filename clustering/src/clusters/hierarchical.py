@@ -1,6 +1,7 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
+# encoding=utf-8
 
-from sklearn.cluster import AgglomerativeClustering
+# from sklearn.cluster import AgglomerativeClustering
 import numpy as np
 import os, sys
 import argparse as ap
@@ -9,6 +10,7 @@ from utils.preprocess import load_data
 from utils.visualize import visualize, MDS_visualize, visualize_proc
 from utils.metrics import silhouette_score_
 from scipy.cluster.hierarchy import ward
+from utils.config import args
 
 output_dir = "../output"
 data_dir = '../data'
@@ -16,7 +18,7 @@ data_dir = '../data'
 parser = ap.ArgumentParser()
 parser.add_argument("--n_clusters", default=None, help="numbers of clusters", type=int)
 parser.add_argument("--threshold", default=None, help="The linkage distance threshold above which, clusters will not be merged", type=float)
-parser.add_argument('--linkage', default='ward', help='')
+parser.add_argument('--linkage', default='ward', help='linkage methods. Only support ward now.')
 # min, max, group average, ward
 '''
 - ward minimizes the variance of the clusters being merged.
@@ -60,11 +62,7 @@ class hierarchical:
         heapq.heapify(distance_list)
         return distance_list, distance_dict
 
-
     def updateHeap(self, pairs, new_cluster_label):
-        # heap = [i for i in heap if i[1][0] != pairs[0]]
-        # heap = [i for i in heap if i[1][1] != pairs[0]]
-
         new_dissimilarity = []
         if self.linkage == 'ward':
             for i in self.clusters:
@@ -91,8 +89,9 @@ class hierarchical:
         X = np.array(raw_data)
 
         if self.linkage == 'standard':
-            clusters = AgglomerativeClustering(n_clusters=5).fit(X)
-            self.y = clusters.labels_
+            # clusters = AgglomerativeClustering(n_clusters=5).fit(X)
+            # self.y = clusters.labels_
+            pass
         else:
             dissimilarity = self.euclidean(X, X)
             self.heap, self.distance_dict = self.buildHeap(dissimilarity)
@@ -101,6 +100,7 @@ class hierarchical:
             self.num_samples = X.shape[0]
             self.y = np.zeros(self.num_samples)
             self.clusters = dict(zip(np.transpose(np.arange(self.num_samples)), np.transpose([np.arange(self.num_samples)])))
+            self.means = []
 
             if self.distance_threshold is not None:
                 self.n_clusters = 1
@@ -122,11 +122,13 @@ class hierarchical:
             num_class = 0
             for c in self.clusters:
                 self.y[self.clusters[c]] = num_class
+                self.means.append(np.mean(X[self.clusters[c]], axis=0))
                 num_class += 1
 
             if(self.distance_threshold is None and num_class != self.n_clusters):
                 raise ValueError('Unimplemented Error')
         
+        print('Means for clusters: %s' % str(self.means))
         intra_distance, inter_distance, s_score = silhouette_score_(X, self.y)
         # print('#samples in clusters, %d, %d, %d, %d, %d' %(self.clusters[0], self.))
         print('intra distance: %f' %intra_distance)
@@ -140,9 +142,6 @@ class hierarchical:
 
         vis_proc_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Hierarchical_proc_%d.png' %self.n_clusters))
         visualize_proc(X, self.y, self.n_clusters, vis_proc_path)
-        # clusters = AgglomerativeClustering(n_clusters = self.n_clusters, linkage = self.linkage).fit(x)
-        # print(km.cluster_centers_)
-        # print(km.labels_)
 
 
 if __name__ == "__main__":
