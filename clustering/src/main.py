@@ -7,7 +7,6 @@ from utils.metrics import silhouette_score_
 import os, sys
 import argparse as ap
 
-
 parser = ap.ArgumentParser()
 parser.add_argument("--method", default='kmeans', help="clustering method", type=str)
 parser.add_argument("--eps", default=8.5, help="The maximum distance between two samples for one to be considered \
@@ -18,7 +17,7 @@ parser.add_argument("--algo", default='self-implemented', help="", type=str)
 
 parser.add_argument("--n_clusters", default=5, help="numbers of clusters", type=int)
 parser.add_argument("--threshold", default=None, help="The linkage distance threshold above which, clusters will not be merged", type=float)
-parser.add_argument('--linkage', default='ward', help='')
+parser.add_argument('--linkage', default='ward', help='linkage method.')
 
 parser.add_argument("--init", default='kmeans++', help='method for init clusters', type=str)
 # parser.add_argument('--linkage', default='ward', help='')
@@ -29,14 +28,19 @@ parser.add_argument("--random_state", default=10, help='random seed for dimensio
 parser.add_argument("--outpit_dir", default='../output', type=str)
 parser.add_argument("--data_dir", default='../data', type=str)
 
+parser.add_argument("--repeat", default=12, help='repeat for n times', type=int)
+
 args=parser.parse_args()
 
 if __name__ == "__main__":
-    # print(sys.path)
+    
     data = load_data(os.path.join(sys.path[0], args.data_dir, 'cluster_data.txt'))
-    # print(data)
 
     if args.method == 'kmeans':
+        args.init = 'random'
+        kmeans_clustering = KMeans(args)
+        kmeans_clustering.run(data)
+    elif args.method == 'kmeans++':
         kmeans_clustering = KMeans(args)
         kmeans_clustering.run(data)
     elif args.method == 'hierarchical':
@@ -48,13 +52,12 @@ if __name__ == "__main__":
     elif args.method == 'test_kmeans':
         args.init = 'random'
         kmeans_clustering = KMeans(args)
-        for i in range(12):
+        for i in range(args.repeat):
             kmeans_clustering.run(data)
     elif args.method == 'test_kmeans++':
         kmeans_clustering = KMeans(args)
-        for i in range(12):
+        for i in range(args.repeat):
             kmeans_clustering.run(data)   
-
     else:
         raise ValueError('Unimplemented Method. Please choose from kmeans, hierarchical and DBSCAN')
 
