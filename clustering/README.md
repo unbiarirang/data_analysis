@@ -48,9 +48,11 @@ python main.py --method kmeans++
 txt file saved in `./clustering/output/kmeans_5.txt`.
 
 visulization results saved in `./clustering/output/kmeans_5.png`
-<img src='./clustering/output/kmeans_5.png'></img>
+
+![](output/kmeans_5.png)
 
 
 ## References: 
 [1] [Deep learning for time series classification: a review](https://arxiv.org/pdf/1809.04356.pdf)
+[2] [k-means++: the advantages of careful seeding](https://www.researchgate.net/publication/220778887_K-Means_The_Advantages_of_Careful_Seeding)
 
