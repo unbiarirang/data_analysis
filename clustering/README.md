@@ -45,9 +45,10 @@ python main.py --method DBSCAN           # using DBSCAN
 ```
 python main.py --method kmeans++
 ```
-txt file saved in `./clustering/src/output/kmeans_5.txt`.
-visulization results saved in `./clustering/src/output/kmeans_5.png`
-<img src='./clustering/src/output/kmeans_5.png'></img>
+txt file saved in `./clustering/output/kmeans_5.txt`.
+
+visulization results saved in `./clustering/output/kmeans_5.png`
+<img src='./clustering/output/kmeans_5.png'></img>
 
 
 ## References: 
