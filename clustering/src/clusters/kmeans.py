@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # encoding=utf-8
 
-from sklearn.cluster import KMeans as KMeans_standard
+# from sklearn.cluster import KMeans as KMeans_standard
 from sklearn.metrics import silhouette_score
 import numpy as np
 import os, sys
@@ -9,22 +9,18 @@ import argparse as ap
 from utils.preprocess import load_data
 from utils.visualize import visualize, MDS_visualize
 from utils.metrics import silhouette_score_
-
-output_dir = "../output"
-data_dir = '../data'
-
-parser = ap.ArgumentParser()
-parser.add_argument("--n_clusters", default=5, help="numbers of clusters", type=int)
-parser.add_argument("--init", default='kmeans++', help='method for init clusters', type=str)
-args=parser.parse_args()
+from utils.config import args
 
 class KMeans:
-    def __init__(self, n_clusters, init='kmeans++'):
+    def __init__(self, args):
         self.eps = 10e-3
-        self.n_clusters = n_clusters
-        self.init = init
+        self.n_clusters = args.n_clusters
+        self.init = args.init
         self.means = []
+        self.reduction = args.reduction
+        self.random_state = args.random_state
         # self.n_clusters = 5
+        self.num = 0
         
     def euclidean(self, X, y, square = False):
         if not square:
@@ -76,10 +72,10 @@ class KMeans:
         first_center = X[first_center_id]
         centers = np.array([first_center])
         n_local_trials = 2 + int(np.log(self.n_clusters))
-        print(n_local_trials)
+        # print(n_local_trials)
 
-        
         for c in range(1, self.n_clusters):
+            # calculate distance_metrix
             dissimilarity_square = self.euclidean(X, centers, square = True)# np.transpose([np.sum(X* X, axis=1)]) + np.sum(centers* centers, axis=1) - 2* X.dot(centers.T)
             dissimilarity_square.reshape(num_samples, -1)
             closest_dissimilarity_square = np.min(dissimilarity_square, axis=1)
@@ -87,10 +83,13 @@ class KMeans:
             candidate_seeds = np.random.random_sample(n_local_trials) * np.sum(closest_dissimilarity_square)
             candidate_ids = np.searchsorted(possibility_matrix, candidate_seeds)
             # print(candidate_ids)
-            # select 1 in candidates
+
+            # select candidates
             dissimilarity_to_candidates = self.euclidean(X[candidate_ids], X, square=True)
             center_id = None
             best_potential = np.sum(closest_dissimilarity_square)
+
+            # test candidates
             for trial in range(n_local_trials):
                 new_dissimilarity_square = np.minimum(closest_dissimilarity_square, dissimilarity_to_candidates[trial])
                 # print(new_dissimilarity_square.shape)
@@ -100,12 +99,6 @@ class KMeans:
                     center_id = candidate_ids[trial]
                     # print(trial)
             centers = np.r_[centers, np.array([X[center_id]])]
-            # print(centers.shape)
-            # print(dissimilarity_square.shape)
-            # print(closest_dissimilarity_square.shape)
-            # print(possibility_matrix[1999])
-            # print(np.sum(closest_dissimilarity_square))
-            # print(center_seed)
         return self.rinit_clusters(X, centers = centers)
 
     def update_clusters(self, X):
@@ -134,13 +127,16 @@ class KMeans:
         X = np.array(raw_data)
         # print(X[:10])
         num_samples = X.shape[0]
+
+        # different init methods
         if(self.init == 'kmeans++'):
             self.y, self.means, self.clusters = self.kinit_clusters(X)
         elif(self.init == 'random'):
             self.y, self.means, self.clusters = self.rinit_clusters(X)
         elif(self.init == 'standard'):
-            km = KMeans_standard(n_clusters = self.n_clusters).fit(X)
-            self.y = km.labels_
+            pass
+            # km = KMeans_standard(n_clusters = self.n_clusters).fit(X)
+            # self.y = km.labels_
         else:
             raise ValueError('Unknown init method: %s' %args.init)
 
@@ -154,34 +150,40 @@ class KMeans:
                 # change, self.clusters = update_clusters(x)
             print('iterations over')
 
-        # km = KMeans(n_clusters = n_clusters, random_state = 1244).fit(x)
-        # print(km.cluster_centers_)
-        # print(km.labels_)
-        
-        # scores = silhouette_score(X, self.y, metric='euclidean')
-        # print('silhouette scores: %f' %scores)
-
+        print('Means for clusters: %s' % str(self.means))
         intra_distance, inter_distance, s_score = silhouette_score_(X, self.y)
         # print('#samples in clusters, %d, %d, %d, %d, %d' %(self.clusters[0], self.))
         print('intra distance: %f' %intra_distance)
         print('inter_distance: %f' %inter_distance)
         print('silhouette score: %f' %s_score)
-
-        res_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Kmeans_%d.txt' %self.n_clusters))
+        kargs = {'intra': intra_distance, 'inter': inter_distance, 'score': s_score}
+        res_path = os.path.normpath(os.path.join(sys.path[0], args.output_dir, 'Kmeans_%d.txt' %self.n_clusters))
         write_data = np.c_[X, self.y]
         # print(write_data[:1])
         np.savetxt(res_path, write_data, fmt='%d',delimiter=' ')
         print('Prediction results saved in %s' % res_path)
-                
 
-        vis_path = os.path.normpath(os.path.join(sys.path[0], output_dir, 'Kmeans_%d.png' %self.n_clusters))
-        visualize(raw_data, X, self.y, self.n_clusters, 'kmeans', vis_path)
+        self.num += 1
+        # print(self.num)
+        if self.init == 'random':
+            if args.method == 'test_kmeans':
+                vis_path = os.path.normpath(os.path.join(sys.path[0], args.output_dir, 'Kmeans_%d_%d.png' %(self.n_clusters, self.num)))
+            else:
+                vis_path = os.path.normpath(os.path.join(sys.path[0], args.output_dir, 'Kmeans_%d.png' %(self.n_clusters)))
+            visualize(raw_data, X, self.y, self.n_clusters, 'kmeans', vis_path, self.reduction, self.random_state, **kargs)
+        elif self.init == 'kmeans++':
+            if args.method == 'test_kmeans++':
+                vis_path = os.path.normpath(os.path.join(sys.path[0], args.output_dir, 'Kmeans++_%d_%d.png' %(self.n_clusters, self.num)))
+            else:
+                vis_path = os.path.normpath(os.path.join(sys.path[0], args.output_dir, 'Kmeans++_%d.png' %(self.n_clusters)))
+            visualize(raw_data, X, self.y, self.n_clusters, 'kmeans++', vis_path, self.reduction, self.random_state, **kargs)
         
 
 
 if __name__ == "__main__":
     # print(sys.path)
-    data = load_data(os.path.join(sys.path[0], data_dir, 'cluster_data.txt'))
+    data = load_data(os.path.join(sys.path[0], args.data_dir, 'cluster_data.txt'))
     # print(data)
-    kmeans_clustering = KMeans(n_clusters=args.n_clusters, init=args.init)
+    # args=parser.parse_args()
+    kmeans_clustering = KMeans(args)
     kmeans_clustering.run(data)

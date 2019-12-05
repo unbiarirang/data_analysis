@@ -29,25 +29,15 @@ python main.py --method hierarachical    # using hierarchical clustering
 python main.py --method DBSCAN           # using DBSCAN
 ```
 > Other avaliable arguments:
-> 
 > --method: Clustering method. Choices: test_kmeans, test_kmeans++, except for four listed.
-> 
 > --repeat: Repeat test for n times to validate robustness
-> 
 > --eps: Only for DBSCAN, the maximum distance between two samples for one to be considered as in the neighborhood of the other.
-> 
 > --min_samples: Only for DBSCAN, the number of samples (or total weight) in a neighborhood for a point to be considered as a core point.
-> 
 > --n_clusters: Only for kmeans or hierarchical clustering, the numbers of clusters
-> 
 > --init:Only for kmeans, method for init clusters'
-> 
 > --reduction: method for dimension reduction. Choices: TSNE, MDS
-> 
 > --random_state: random seed for dimension reduction
-> 
 > --output_dir: Dir to output results
-> 
 > --data_dir: Dir to load data
 
 
@@ -58,8 +48,12 @@ python main.py --method kmeans++
 txt file saved in `./clustering/output/kmeans_5.txt`.
 
 visulization results saved in `./clustering/output/kmeans_5.png`
-<img src='./clustering/output/kmeans_5.txt'></img>
+
+![](output/kmeans_5.png)
 
 
-reference: [Deep learning for time series classification: a review](https://arxiv.org/pdf/1809.04356.pdf)
+## References: 
+[1] [Deep learning for time series classification: a review](https://arxiv.org/pdf/1809.04356.pdf)
+
+[2] [k-means++: the advantages of careful seeding](https://www.researchgate.net/publication/220778887_K-Means_The_Advantages_of_Careful_Seeding)
 
